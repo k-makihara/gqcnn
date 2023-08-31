@@ -32,7 +32,7 @@ from collections import OrderedDict
 import json
 import os
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from .network_tf import GQCNNTF
 from ...utils import TrainingMode, InputDepthMode, GQCNNFilenames

@@ -149,7 +149,9 @@ def read_pose_data(pose_arr, gripper_mode):
 
 def reduce_shape(shape):
     """Get shape of a layer for flattening."""
-    shape = [x.value for x in shape[1:]]
+    #shape = [x.value for x in shape[1:]]
+    shape = [x for x in shape[1:]]
+    print(shape)
     f = lambda x, y: 1 if y is None else x * y  # noqa: E731
     return reduce(f, shape, 1)
 
@@ -174,7 +176,7 @@ def weight_name_to_layer_name(weight_name):
 
 def imresize(image, size, interp="nearest"):
     """Wrapper over `skimage.transform.resize` to mimic `scipy.misc.imresize`.
-    Copied from https://github.com/BerkeleyAutomation/perception/blob/master/perception/image.py#L38.  # noqa: E501
+    Copied from https://github.com/BerkeleyAutomation/autolab_core/blob/master/autolab_core/image.py#L32.  # noqa: E501
 
     Since `scipy.misc.imresize` has been removed in version 1.3.*, instead use
     `skimage.transform.resize`. The "lanczos" and "cubic" interpolation methods

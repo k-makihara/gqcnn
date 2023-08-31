@@ -36,7 +36,7 @@ from setuptools.command.install import install
 import subprocess
 import sys
 
-TF_MAX_VERSION = "1.15.0"
+TF_MAX_VERSION = "2.21.0"
 
 # Set up logger.
 logging.basicConfig()  # Configure the root logger.
@@ -53,7 +53,7 @@ def get_tf_dep():
             ["nvidia-smi", "--query-gpu=gpu_name",
              "--format=csv"]).decode().strip().split("\n")[1:]
         if len(gpus) > 0:
-            tf_dep = "tensorflow-gpu<={}".format(TF_MAX_VERSION)
+            tf_dep = "tensorflow<={}".format(TF_MAX_VERSION)
         else:
             no_device_msg = ("Found Nvidia device driver but no"
                              " devices...installing Tensorflow for CPU.")

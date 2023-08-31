@@ -38,8 +38,8 @@ import os
 import time
 
 import numpy as np
-import tensorflow as tf
-import tensorflow.contrib.framework as tcf
+import tensorflow.compat.v1 as tf
+#import tensorflow.contrib.framework as tcf
 
 from autolab_core import Logger
 from ...utils import (reduce_shape, read_pose_data, pose_dim,
@@ -340,7 +340,8 @@ class GQCNNTF(object):
             self._weights = GQCNNWeights()
 
             # Read/generate weight/bias variable names.
-            ckpt_vars = tcf.list_variables(ckpt_file)
+            #ckpt_vars = tcf.list_variables(ckpt_file)
+            ckpt_vars = tf.train.list_variables(ckpt_file)
             full_var_names = []
             short_names = []
             for variable, shape in ckpt_vars:
@@ -373,7 +374,8 @@ class GQCNNTF(object):
             self._weights = GQCNNWeights()
 
             # Read/generate weight/bias variable names.
-            ckpt_vars = tcf.list_variables(ckpt_file)
+            #ckpt_vars = tcf.list_variables(ckpt_file)
+            ckpt_vars = tf.train.list_variables(ckpt_file)
             full_var_names = []
             short_names = []
             for variable, shape in ckpt_vars:
@@ -560,12 +562,15 @@ class GQCNNTF(object):
             return self._sess
         self._logger.info("Initializing TF Session...")
         with self._graph.as_default():
-            init = tf.global_variables_initializer()
-            self.tf_config = tf.ConfigProto()
+            #init = tf.global_variables_initializer()
+            init = tf.compat.v1.global_variables_initializer()
+            #self.tf_config = tf.ConfigProto()
+            self.tf_config = tf.compat.v1.ConfigProto()
             # Allow Tensorflow gpu growth so Tensorflow does not lock-up all
             # GPU memory.
             self.tf_config.gpu_options.allow_growth = True
-            self._sess = tf.Session(graph=self._graph, config=self.tf_config)
+            #self._sess = tf.Session(graph=self._graph, config=self.tf_config)
+            self._sess = tf.compat.v1.Session(graph=self._graph, config=self.tf_config)
             self._sess.run(init)
         return self._sess
 
@@ -878,21 +883,21 @@ class GQCNNTF(object):
                 end_ind = cur_ind + dim
 
                 if self._input_depth_mode == InputDepthMode.POSE_STREAM:
-                    self._input_im_arr[:dim, ...] = (
-                        image_arr[cur_ind:end_ind, ...] -
-                        self._im_mean) / self._im_std
+                    self._input_im_arr[:dim,
+                                       ...] = (image_arr[cur_ind:end_ind, ...]
+                                               - self._im_mean) / self._im_std
                     self._input_pose_arr[:dim, :] = (
                         pose_arr[cur_ind:end_ind, :] -
                         self._pose_mean) / self._pose_std
                 elif self._input_depth_mode == InputDepthMode.SUB:
                     self._input_im_arr[:dim, ...] = image_arr[cur_ind:end_ind,
                                                               ...]
-                    self._input_pose_arr[:dim, :] = pose_arr[cur_ind:
-                                                             end_ind, :]
+                    self._input_pose_arr[:dim, :] = pose_arr[
+                        cur_ind:end_ind, :]
                 elif self._input_depth_mode == InputDepthMode.IM_ONLY:
-                    self._input_im_arr[:dim, ...] = (
-                        image_arr[cur_ind:end_ind, ...] -
-                        self._im_mean) / self._im_std
+                    self._input_im_arr[:dim,
+                                       ...] = (image_arr[cur_ind:end_ind, ...]
+                                               - self._im_mean) / self._im_std
 
                 gqcnn_output = self._sess.run(
                     self._output_tensor,
@@ -1417,9 +1422,9 @@ class GQCNNTF(object):
                 self._input_depth_mode == InputDepthMode.IM_ONLY:
             extraneous_stream_msg = ("When using input depth mode '{}', only"
                                      " im stream is allowed!")
-            assert not ("pose_stream" in self._architecture
-                        or "merge_stream" in self._architecture
-                        ), extraneous_stream_msg.format(self._input_depth_mode)
+            assert not ("pose_stream" in self._architecture or "merge_stream"
+                        in self._architecture), extraneous_stream_msg.format(
+                            self._input_depth_mode)
             with tf.name_scope("im_stream"):
                 return self._build_im_stream(input_im_node,
                                              input_pose_node,

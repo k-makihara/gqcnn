@@ -43,7 +43,7 @@ from past.builtins import xrange
 import cv2
 import numpy as np
 import scipy.stats as ss
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from autolab_core import (BinaryClassificationResult, RegressionResult,
                           TensorDataset, Logger)
@@ -147,9 +147,14 @@ class GQCNNTrainerTF(object):
                         labels=self.train_labels_node,
                         logits=log))
             else:
+                #return tf.reduce_mean(
+                #    tf.nn.sparse_softmax_cross_entropy_with_logits(
+                #        _sentinel=None,
+                #        labels=self.train_labels_node,
+                #        logits=self.train_net_output,
+                #        name=None))
                 return tf.reduce_mean(
                     tf.nn.sparse_softmax_cross_entropy_with_logits(
-                        _sentinel=None,
                         labels=self.train_labels_node,
                         logits=self.train_net_output,
                         name=None))
@@ -1517,8 +1522,9 @@ class GQCNNTrainerTF(object):
                         (train_label_arr.shape[0], self._angular_bins * 2))
                     for i in range(angles.shape[0]):
                         bins[i] = angles[i] // self._bin_width
-                        train_pred_mask_arr[
-                            i, int((angles[i] // self._bin_width) * 2)] = 1
+                        train_pred_mask_arr[i,
+                                            int((angles[i] //
+                                                 self._bin_width) * 2)] = 1
                         train_pred_mask_arr[
                             i, int((angles[i] // self._bin_width) * 2 + 1)] = 1
 
@@ -1590,7 +1596,7 @@ class GQCNNTrainerTF(object):
                 # Rotate with 50% probability.
                 if np.random.rand() < 0.5:
                     theta = 180.0
-                    rot_map = cv2.getRotationMatrix2D(tuple(self.im_center),
+                    rot_map = cv2.getRotationMatrix2D((int(self.im_center[0]), int(self.im_center[1])),
                                                       theta, 1)
                     train_image = cv2.warpAffine(
                         train_image,
