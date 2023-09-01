@@ -14,12 +14,38 @@
    <a>
        <img alt="Python 3 Versions" src="https://img.shields.io/badge/python-3.5%20%7C%203.6%20%7C%203.7%20%7C%203.10-yellow.svg">
    </a>
+   <a>
+       <img alt="Ubnutu Versions" src="https://img.shields.io/badge/ubuntu-16.04%20%7C%2018.04%20%7C%2020.04-green.svg">
+   </a>
 </p>
 
 ## Package Overview
 The gqcnn Python package is for training and analysis of Grasp Quality Convolutional Neural Networks (GQ-CNNs). It is part of the ongoing [Dexterity-Network (Dex-Net)](https://berkeleyautomation.github.io/dex-net/) project created and maintained by the [AUTOLAB](https://autolab.berkeley.edu) at UC Berkeley.
 
+## System requirements
+Any system may work if it can be installed tensorflow 2. CUDA and CuDNN versions depend on your specific GPUs.
+
+### Successfully worked versions info
+```
+OS: Ubuntu 20.04
+GPU: NVIDIA RTX A6000 48GB
+CUDA: 11.2
+cuDNN: ??
+Nvidia driver: 470.129.06
+python: 3.8.10
+```
+
+```
+OS: Rocky Linux (ABCI 2.0 V-node)
+GPU: NVIDIA V100 for NVLink 16GiB HBM2 x4
+gcc: 12.2 (gcc/12.2.0)
+python: 3.10.10 (python/3.10/3.10.10)
+CUDA: 11.8 (cuda/11.8/11.8.0)
+cuDNN: 8.6.0 (cudnn/8.6/8.6.0)
+```
+
 ## Versions (the original script is written in tensoflow 1.15, but it uses tensorflow 2.12 and tensorflow.compat.v1)
+```
 Package                      Version   Editable project location \
 ---------------------------- --------- ------------------------------------
 absl-py                      1.4.0
@@ -45,7 +71,7 @@ google-auth                  2.18.0
 google-auth-oauthlib         1.0.0
 google-pasta                 0.2.0
 GPUtil                       1.4.0
-gqcnn                        1.3.0     /home/aad13465wz/grasp-fractal/gqcnn
+gqcnn                        1.3.0    
 grpcio                       1.54.2
 h5py                         3.8.0
 idna                         3.4
@@ -120,9 +146,64 @@ Werkzeug                     2.3.4
 wheel                        0.40.0
 wrapt                        1.14.1
 xxhash                       3.2.0
-
+```
 ## Installation and Usage
 Please see the [docs](https://berkeleyautomation.github.io/gqcnn/) for installation and usage instructions.
+
+In pip installation, something problem may happen in depended packages. Berkeley-AUTOLAB specific packages should be installed.
+
+- autolab-core
+- autolab-perception
+- visualization
+
+The installation is following to Dexnet install [docs](https://berkeleyautomation.github.io/dex-net/code.html)
+
+```bash
+# go to the root directory that you cloned the package
+
+cd /path/to/gqcnn
+mkdir deps
+cd deps
+
+git clone https://github.com/BerkeleyAutomation/autolab_core.git
+git clone https://github.com/BerkeleyAutomation/perception.git
+git clone https://github.com/k-makihara/visualization.git
+
+# install autolab_core
+cd autolab_core
+python setup.py develop
+cd ..
+
+# install perception
+cd perception
+python setup.py develop
+cd ..
+
+# install visualization
+cd visualization
+python setup.py develop
+cd ..
+
+```
+
+and, please do again in the [docs](https://berkeleyautomation.github.io/gqcnn/)
+
+```bash
+cd /path/to/gqcnn
+pip install .
+```
+
+In these installations, if you may meet additional errors, please install this package from apt and pip.　Not all packages are necessary, so it's better to select and install only the required packages.
+
+```bash
+# install apt deps
+sudo apt-get install cmake libvtk5-dev python-vtk python-sip python-qt4 libosmesa6-dev meshlab libhdf5-dev
+
+# install pip deps
+pip install numpy scipy scikit-learn scikit-image opencv-python pyassimp tensorflow h5py mayavi matplotlib catkin_pkg multiprocess dill cvxopt ipython pillow pyhull setproctitle trimesh
+
+```
+
 
 ## Citation
 If you use any part of this code in a publication, please cite [the appropriate Dex-Net publication](https://berkeleyautomation.github.io/gqcnn/index.html#academic-use).
