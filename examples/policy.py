@@ -35,6 +35,9 @@ import argparse
 import json
 import os
 import time
+import matplotlib.pyplot as plt
+from skimage import (draw, feature, io, measure, morphology, segmentation,
+                     transform)
 
 import numpy as np
 
@@ -186,10 +189,11 @@ if __name__ == "__main__":
 
     # Read images.
     depth_data = np.load(depth_im_filename)
+        
     depth_im = DepthImage(depth_data, frame=camera_intr.frame)
     color_im = ColorImage(np.zeros([depth_im.height, depth_im.width,
                                     3]).astype(np.uint8),
-                          frame=camera_intr.frame)
+                        frame=camera_intr.frame)
 
     # Optionally read a segmask.
     segmask = None

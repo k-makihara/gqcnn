@@ -1,12 +1,13 @@
 autolab-core
 autolab-perception
 visualization
-numpy
+numpy==1.23.5
 opencv-python
 scipy
 matplotlib
-tensorflow<=1.15.0
+tensorflow
 scikit-learn
 scikit-image
 gputil
 psutil
+ruamel.yaml==0.2

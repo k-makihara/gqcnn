@@ -96,3 +96,9 @@ ENV/
 
 realtune/
 analysis/
+
+dexnet/
+
+policy_tif.py
+
+phoxi.intr
