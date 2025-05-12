@@ -137,9 +137,9 @@ class InstallCmd(install, object):
 
 
 requirements = [
-    "autolab-core", "autolab-perception", "visualization", "numpy", "scipy",
-    "matplotlib", "opencv-python", "scikit-learn", "scikit-image", "psutil",
-    "gputil"
+    #"autolab-core", "autolab-perception", "visualization", "numpy",
+    #"matplotlib", "opencv-python", "scikit-learn", "scikit-image", "psutil",
+    #"gputil"
 ]
 
 exec(

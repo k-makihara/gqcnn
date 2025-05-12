@@ -227,6 +227,7 @@ class GQCNNAnalyzer(object):
         self.logger.info("Loading dataset %s" % (dataset_dir))
         dataset = TensorDataset.open(dataset_dir)
         train_indices, val_indices, _ = dataset.split(split_name)
+        print(train_indices)
 
         # Visualize conv filters.
         conv1_filters = gqcnn.filters
@@ -268,8 +269,8 @@ class GQCNNAnalyzer(object):
                 # TODO(vsatish): These should use the max angle instead.
                 angles = np.abs(angles) % GeneralConstants.PI
                 angles[neg_ind] *= -1
-                g_90 = np.where(angles > (GeneralConstants.PI / 2))
-                l_neg_90 = np.where(angles < (-1 * (GeneralConstants.PI / 2)))
+                g_90 = np.where(angles > (GeneralConstants.PI // 2))
+                l_neg_90 = np.where(angles < (-1 * (GeneralConstants.PI // 2)))
                 angles[g_90] -= GeneralConstants.PI
                 angles[l_neg_90] += GeneralConstants.PI
                 # TODO(vsatish): Fix this along with the others.

@@ -1,0 +1,9 @@
+{
+  "image_field_name": "depth_ims_tf_table",
+  "pose_field_name": "hand_poses",
+  "target_metric_name": "robust_ferrari_canny",
+  "metric_thresh": 0.002,
+  "gripper_mode": "legacy_parallel_jaw",
+  "dataset_dir": "/home/deepstation/Downloads/realtrainset_6",
+  "split_name": "image_wise"
+}
