@@ -45,6 +45,7 @@ from autolab_core import Logger
 from ...utils import (reduce_shape, read_pose_data, pose_dim,
                       weight_name_to_layer_name, GripperMode, TrainingMode,
                       InputDepthMode, GQCNNFilenames)
+import cv2
 
 
 class GQCNNWeights(object):
@@ -538,6 +539,18 @@ class GQCNNTF(object):
             self._output_tensor = self._build_network(
                 self._input_im_node, self._input_pose_node,
                 self._input_drop_rate_node)
+            self._logits_tensor = self._output_tensor
+
+            target_layer = 'conv1_2'   # 最後の conv 層
+            class_idx    = 0            # 成功クラスのインデックス
+            with self._graph.as_default():
+                fmap    = self._feature_tensors[target_layer]         # (B,H',W',K)
+                logits  = self._logits_tensor[:, class_idx]          # (B,)
+                grads   = tf.gradients(logits, fmap)[0]               # (B,H',W',K)
+                weights = tf.reduce_mean(grads, axis=(1,2))          # (B,K)
+            # 保存しておく
+            self._cam_fmap    = fmap
+            self._cam_weights = weights
 
             # Add softmax function to output of network (this is optional
             # because 1) we might be doing regression or 2) we are training and
@@ -688,6 +701,83 @@ class GQCNNTF(object):
         if close_sess:
             self.close_session()
         return filters
+
+    def gradcam(self, image, pose, class_index, layer_name, upsample_size=None):
+        """
+        GradCAM を計算してヒートマップを返す。
+
+        Parameters
+        ----------
+        image : np.ndarray
+            入力画像 (H×W×C)，ネットワーク入力前処理済み
+        pose  : np.ndarray
+            グリッパー姿勢ベクトル
+        class_index : int
+            関心のある出力ノードのインデックス（クラス番号など）
+        layer_name : str
+            対象にする畳み込み層名（例: 'conv3_2'）
+        upsample_size : tuple(int,int), optional
+            ヒートマップをリサイズするサイズ (height, width)
+        """
+        # 1. グラフから必要なテンソルを取得
+        #logit = self._output_tensor[:, class_index]  # batch次元含む
+        #logit = self._logits_tensor[:, class_index]
+        #fmap = self._feature_tensors[layer_name]     # shape=(B,H',W',K)
+        if self._sess is None:
+            self.open_session()
+            close = True
+        else:
+            close = False
+
+        bs = self._batch_size
+        img_batch  = np.repeat(image[np.newaxis,...], bs, axis=0)
+        pose_batch = np.repeat(pose[np.newaxis,...], bs, axis=0)
+        feed = {
+            self._input_im_node:   img_batch,
+            self._input_pose_node: pose_batch
+        }
+        # --- 一度定義した op を実行 ---
+        fmap_val, weights_val = self._sess.run(
+            [self._cam_fmap, self._cam_weights],
+            feed_dict=feed)
+            
+        if close:
+            self.close_session()
+
+        if close:
+            self.close_session()
+
+        # 5. 重み付き合成 ＋ ReLU
+        #    fmap_val: (1,H',W',K), weights_val: (1,K)
+        fmap_val = fmap_val[0]    # (H',W',K)
+        w = weights_val[0]        # (K,)
+        #print("w[0:5] =", w[:5], "norm =", np.linalg.norm(w))
+        #print(fmap_val[:,:,0])
+        
+        cam = np.zeros(fmap_val.shape[:2], dtype=np.float32)
+        for k, wk in enumerate(w):
+            cam += wk * fmap_val[..., k]
+        #print("raw cam min/max:", cam.min(), cam.max())
+        #cam = np.maximum(cam, 0)
+        
+
+        # raw_cam = np.maximum(cam, 0)
+        # import matplotlib.pyplot as plt
+        # plt.figure()
+        # plt.imshow(raw_cam, cmap='hot')
+        # plt.colorbar()
+        # plt.show()
+        print(cam.min())
+        print(cam.max())
+        # 6. ヒートマップを正規化
+        cam -= cam.min()
+        cam /= (cam.max() + 1e-8)
+        #cam /= (cam.max())
+        # 7. アップサンプリング
+        H, W = upsample_size or image.shape[:2]
+        cam = cv2.resize(cam, (W, H), interpolation=cv2.INTER_LINEAR)
+
+        return cam
 
     def set_batch_size(self, batch_size):
         """Update the batch size to be used for during inference.

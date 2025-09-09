@@ -34,6 +34,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.ndimage import zoom
 
 from autolab_core import (BinaryClassificationResult, TensorDataset,
                           Logger, DepthImage)
@@ -206,6 +207,13 @@ class GQCNNAnalyzer(object):
         gqcnn.open_session()
         gripper_mode = gqcnn.gripper_mode
         angular_bins = gqcnn.angular_bins
+        #print(gqcnn._feature_tensors)
+        #import sys; sys.exit()
+
+        # --- 1. GradCAM の設定 ---
+        target_layer = 'conv2_2'    # 最後の畳み込み層など
+        class_idx    = 1             # 例：成功確率の「成功クラス」インデックス
+        # --------------------------
 
         # Read params from the config.
         if dataset_config is None:
@@ -227,18 +235,26 @@ class GQCNNAnalyzer(object):
         self.logger.info("Loading dataset %s" % (dataset_dir))
         dataset = TensorDataset.open(dataset_dir)
         train_indices, val_indices, _ = dataset.split(split_name)
-        print(train_indices)
+        #print(train_indices)
 
         # Visualize conv filters.
         conv1_filters = gqcnn.filters
+        #print(conv1_filters.shape)
         num_filt = conv1_filters.shape[3]
+        #print(num_filt)
         d = utils.sqrt_ceil(num_filt)
+        #print(d)
         vis2d.clf()
         for k in range(num_filt):
-            filt = conv1_filters[:, :, 0, k]
+            filt_org = conv1_filters[:, :, 0, k]
+            #print(filt.shape)
+            scale = 2
+            filt = zoom(filt_org, zoom=(scale, scale), order=3)
+            #plt.imshow(filt_org);plt.show()
+            #plt.imshow(filt);plt.show()
             vis2d.subplot(d, d, k + 1)
             vis2d.imshow(DepthImage(filt))
-            figname = os.path.join(model_output_dir, "conv1_filters.pdf")
+            figname = os.path.join(model_output_dir, "conv1_filters_upsample.pdf")
         vis2d.savefig(figname, dpi=self.dpi)
 
         # Aggregate training and validation true labels and predicted
@@ -295,6 +311,20 @@ class GQCNNAnalyzer(object):
                 all_predictions_raw.extend(raw_predictions.tolist())
             all_labels.extend(label_arr.tolist())
 
+            # preds_real = gqcnn.predict(image_arr, pose_arr)  # shape (N,2) の成功確率など
+
+            # # 2) ゼロパッチで予測
+            # zero_images = np.zeros_like(image_arr)
+            # preds_zero  = gqcnn.predict(zero_images, pose_arr)
+
+            # # 3) 差分を確認
+            # diff = np.abs(preds_real - preds_zero)
+            # print("max diff:", diff.max())
+            # print("mean diff:", diff.mean())
+
+
+        
+
         # Close session.
         gqcnn.close_session()
 
@@ -334,6 +364,14 @@ class GQCNNAnalyzer(object):
         if not os.path.exists(example_dir):
             os.mkdir(example_dir)
 
+        gradcam_train_tp = True
+        gradcam_train_fp = False
+        gradcam_train_tn = False
+        gradcam_train_fn = False
+        gradcam_val_tp = False
+        gradcam_val_fp = False
+        gradcam_val_tn = False
+        gradcam_val_fn = False
         # Train.
         self.logger.info("Saving training examples")
         train_example_dir = os.path.join(example_dir, "train")
@@ -349,15 +387,31 @@ class GQCNNAnalyzer(object):
             datapoint = dataset.datapoint(
                 k, field_names=[image_field_name, pose_field_name])
             vis2d.clf()
-            if angular_bins > 0:
-                self._plot_grasp(datapoint,
-                                 image_field_name,
-                                 pose_field_name,
-                                 gripper_mode,
-                                 angular_preds=train_predictions_raw[j])
+            if not gradcam_train_tp:
+                if angular_bins > 0:
+                    self._plot_grasp(datapoint,
+                                    image_field_name,
+                                    pose_field_name,
+                                    gripper_mode,
+                                    angular_preds=train_predictions_raw[j])
+                else:
+                    self._plot_grasp(datapoint, image_field_name, pose_field_name,
+                                    gripper_mode)
             else:
-                self._plot_grasp(datapoint, image_field_name, pose_field_name,
-                                 gripper_mode)
+                depth_img = datapoint[image_field_name]    # (H,W,1) float
+                vis2d.imshow_gradcam(depth_img.squeeze(-1), cmap=plt.cm.gray_r)
+                pose_vec  = read_pose_data(datapoint[pose_field_name],
+                                        gripper_mode)
+                # batch 次元を取らないシングルサンプル版を呼び出し
+                cam = gqcnn.gradcam(
+                    depth_img,       # 前処理済み depth image
+                    pose_vec,        # 同じく前処理済み pose
+                    class_index=class_idx,
+                    layer_name=target_layer,
+                    upsample_size=(gqcnn._im_height, gqcnn._im_width)
+                )
+                # jet カラーマップ＆半透明で重ね描き
+                vis2d.imshow_gradcam(cam, cmap='jet', alpha=0.5)
             vis2d.title(
                 "Datapoint %d: Pred: %.3f Label: %.3f" %
                 (k, train_result.pred_probs[j], train_result.labels[j]),
@@ -375,15 +429,33 @@ class GQCNNAnalyzer(object):
             datapoint = dataset.datapoint(
                 k, field_names=[image_field_name, pose_field_name])
             vis2d.clf()
-            if angular_bins > 0:
-                self._plot_grasp(datapoint,
-                                 image_field_name,
-                                 pose_field_name,
-                                 gripper_mode,
-                                 angular_preds=train_predictions_raw[j])
+            if not gradcam_train_fp:
+                if angular_bins > 0:
+                    self._plot_grasp(datapoint,
+                                    image_field_name,
+                                    pose_field_name,
+                                    gripper_mode,
+                                    angular_preds=train_predictions_raw[j])
+                else:
+                    self._plot_grasp(datapoint, image_field_name, pose_field_name,
+                                    gripper_mode)
             else:
-                self._plot_grasp(datapoint, image_field_name, pose_field_name,
-                                 gripper_mode)
+                depth_img = datapoint[image_field_name]    # (H,W,1) float
+                vis2d.imshow_gradcam(depth_img.squeeze(-1), cmap=plt.cm.gray_r)
+                pose_vec  = read_pose_data(datapoint[pose_field_name],
+                                        gripper_mode)
+                # batch 次元を取らないシングルサンプル版を呼び出し
+                cam = gqcnn.gradcam(
+                    depth_img,       # 前処理済み depth image
+                    pose_vec,        # 同じく前処理済み pose
+                    class_index=class_idx,
+                    layer_name=target_layer,
+                    upsample_size=(gqcnn._im_height, gqcnn._im_width)
+                )
+                # jet カラーマップ＆半透明で重ね描き
+                vis2d.imshow_gradcam(cam, cmap='jet', alpha=0.5)
+            # ----------------------------------------
+
             vis2d.title(
                 "Datapoint %d: Pred: %.3f Label: %.3f" %
                 (k, train_result.pred_probs[j], train_result.labels[j]),
@@ -401,15 +473,32 @@ class GQCNNAnalyzer(object):
             datapoint = dataset.datapoint(
                 k, field_names=[image_field_name, pose_field_name])
             vis2d.clf()
-            if angular_bins > 0:
-                self._plot_grasp(datapoint,
-                                 image_field_name,
-                                 pose_field_name,
-                                 gripper_mode,
-                                 angular_preds=train_predictions_raw[j])
+            if not gradcam_train_tn:
+                if angular_bins > 0:
+                    self._plot_grasp(datapoint,
+                                    image_field_name,
+                                    pose_field_name,
+                                    gripper_mode,
+                                    angular_preds=train_predictions_raw[j])
+                else:
+                    self._plot_grasp(datapoint, image_field_name, pose_field_name,
+                                    gripper_mode)
             else:
-                self._plot_grasp(datapoint, image_field_name, pose_field_name,
-                                 gripper_mode)
+                depth_img = datapoint[image_field_name]    # (H,W,1) float
+                vis2d.imshow_gradcam(depth_img.squeeze(-1), cmap=plt.cm.gray_r)
+                pose_vec  = read_pose_data(datapoint[pose_field_name],
+                                        gripper_mode)
+                # batch 次元を取らないシングルサンプル版を呼び出し
+                cam = gqcnn.gradcam(
+                    depth_img,       # 前処理済み depth image
+                    pose_vec,        # 同じく前処理済み pose
+                    class_index=class_idx,
+                    layer_name=target_layer,
+                    upsample_size=(gqcnn._im_height, gqcnn._im_width)
+                )
+                # jet カラーマップ＆半透明で重ね描き
+                vis2d.imshow_gradcam(cam, cmap='jet', alpha=0.5)
+
             vis2d.title(
                 "Datapoint %d: Pred: %.3f Label: %.3f" %
                 (k, train_result.pred_probs[j], train_result.labels[j]),
@@ -418,7 +507,7 @@ class GQCNNAnalyzer(object):
                 os.path.join(train_example_dir,
                              "true_negative_%03d.png" % (i)))
 
-        # Train TP.
+        # Train fn.
         false_negative_indices = train_result.false_negative_indices
         np.random.shuffle(false_negative_indices)
         false_negative_indices = false_negative_indices[:self.num_vis]
@@ -427,15 +516,31 @@ class GQCNNAnalyzer(object):
             datapoint = dataset.datapoint(
                 k, field_names=[image_field_name, pose_field_name])
             vis2d.clf()
-            if angular_bins > 0:
-                self._plot_grasp(datapoint,
-                                 image_field_name,
-                                 pose_field_name,
-                                 gripper_mode,
-                                 angular_preds=train_predictions_raw[j])
+            if not gradcam_train_fn:
+                if angular_bins > 0:
+                    self._plot_grasp(datapoint,
+                                    image_field_name,
+                                    pose_field_name,
+                                    gripper_mode,
+                                    angular_preds=train_predictions_raw[j])
+                else:
+                    self._plot_grasp(datapoint, image_field_name, pose_field_name,
+                                    gripper_mode)
             else:
-                self._plot_grasp(datapoint, image_field_name, pose_field_name,
-                                 gripper_mode)
+                depth_img = datapoint[image_field_name]    # (H,W,1) float
+                vis2d.imshow_gradcam(depth_img.squeeze(-1), cmap=plt.cm.gray_r)
+                pose_vec  = read_pose_data(datapoint[pose_field_name],
+                                        gripper_mode)
+                # batch 次元を取らないシングルサンプル版を呼び出し
+                cam = gqcnn.gradcam(
+                    depth_img,       # 前処理済み depth image
+                    pose_vec,        # 同じく前処理済み pose
+                    class_index=class_idx,
+                    layer_name=target_layer,
+                    upsample_size=(gqcnn._im_height, gqcnn._im_width)
+                )
+                # jet カラーマップ＆半透明で重ね描き
+                vis2d.imshow_gradcam(cam, cmap='jet', alpha=0.5)
             vis2d.title(
                 "Datapoint %d: Pred: %.3f Label: %.3f" %
                 (k, train_result.pred_probs[j], train_result.labels[j]),
@@ -459,15 +564,31 @@ class GQCNNAnalyzer(object):
             datapoint = dataset.datapoint(
                 k, field_names=[image_field_name, pose_field_name])
             vis2d.clf()
-            if angular_bins > 0:
-                self._plot_grasp(datapoint,
-                                 image_field_name,
-                                 pose_field_name,
-                                 gripper_mode,
-                                 angular_preds=val_predictions_raw[j])
+            if not gradcam_val_tp:
+                if angular_bins > 0:
+                    self._plot_grasp(datapoint,
+                                    image_field_name,
+                                    pose_field_name,
+                                    gripper_mode,
+                                    angular_preds=train_predictions_raw[j])
+                else:
+                    self._plot_grasp(datapoint, image_field_name, pose_field_name,
+                                    gripper_mode)
             else:
-                self._plot_grasp(datapoint, image_field_name, pose_field_name,
-                                 gripper_mode)
+                depth_img = datapoint[image_field_name]    # (H,W,1) float
+                vis2d.imshow_gradcam(depth_img.squeeze(-1), cmap=plt.cm.gray_r)
+                pose_vec  = read_pose_data(datapoint[pose_field_name],
+                                        gripper_mode)
+                # batch 次元を取らないシングルサンプル版を呼び出し
+                cam = gqcnn.gradcam(
+                    depth_img,       # 前処理済み depth image
+                    pose_vec,        # 同じく前処理済み pose
+                    class_index=class_idx,
+                    layer_name=target_layer,
+                    upsample_size=(gqcnn._im_height, gqcnn._im_width)
+                )
+                # jet カラーマップ＆半透明で重ね描き
+                vis2d.imshow_gradcam(cam, cmap='jet', alpha=0.5)
             vis2d.title("Datapoint %d: Pred: %.3f Label: %.3f" %
                         (k, val_result.pred_probs[j], val_result.labels[j]),
                         fontsize=self.font_size)
@@ -483,15 +604,31 @@ class GQCNNAnalyzer(object):
             datapoint = dataset.datapoint(
                 k, field_names=[image_field_name, pose_field_name])
             vis2d.clf()
-            if angular_bins > 0:
-                self._plot_grasp(datapoint,
-                                 image_field_name,
-                                 pose_field_name,
-                                 gripper_mode,
-                                 angular_preds=val_predictions_raw[j])
+            if not gradcam_val_fp:
+                if angular_bins > 0:
+                    self._plot_grasp(datapoint,
+                                    image_field_name,
+                                    pose_field_name,
+                                    gripper_mode,
+                                    angular_preds=train_predictions_raw[j])
+                else:
+                    self._plot_grasp(datapoint, image_field_name, pose_field_name,
+                                    gripper_mode)
             else:
-                self._plot_grasp(datapoint, image_field_name, pose_field_name,
-                                 gripper_mode)
+                depth_img = datapoint[image_field_name]    # (H,W,1) float
+                vis2d.imshow_gradcam(depth_img.squeeze(-1), cmap=plt.cm.gray_r)
+                pose_vec  = read_pose_data(datapoint[pose_field_name],
+                                        gripper_mode)
+                # batch 次元を取らないシングルサンプル版を呼び出し
+                cam = gqcnn.gradcam(
+                    depth_img,       # 前処理済み depth image
+                    pose_vec,        # 同じく前処理済み pose
+                    class_index=class_idx,
+                    layer_name=target_layer,
+                    upsample_size=(gqcnn._im_height, gqcnn._im_width)
+                )
+                # jet カラーマップ＆半透明で重ね描き
+                vis2d.imshow_gradcam(cam, cmap='jet', alpha=0.5)
             vis2d.title("Datapoint %d: Pred: %.3f Label: %.3f" %
                         (k, val_result.pred_probs[j], val_result.labels[j]),
                         fontsize=self.font_size)
@@ -507,22 +644,38 @@ class GQCNNAnalyzer(object):
             datapoint = dataset.datapoint(
                 k, field_names=[image_field_name, pose_field_name])
             vis2d.clf()
-            if angular_bins > 0:
-                self._plot_grasp(datapoint,
-                                 image_field_name,
-                                 pose_field_name,
-                                 gripper_mode,
-                                 angular_preds=val_predictions_raw[j])
+            if not gradcam_val_tn:
+                if angular_bins > 0:
+                    self._plot_grasp(datapoint,
+                                    image_field_name,
+                                    pose_field_name,
+                                    gripper_mode,
+                                    angular_preds=train_predictions_raw[j])
+                else:
+                    self._plot_grasp(datapoint, image_field_name, pose_field_name,
+                                    gripper_mode)
             else:
-                self._plot_grasp(datapoint, image_field_name, pose_field_name,
-                                 gripper_mode)
+                depth_img = datapoint[image_field_name]    # (H,W,1) float
+                vis2d.imshow_gradcam(depth_img.squeeze(-1), cmap=plt.cm.gray_r)
+                pose_vec  = read_pose_data(datapoint[pose_field_name],
+                                        gripper_mode)
+                # batch 次元を取らないシングルサンプル版を呼び出し
+                cam = gqcnn.gradcam(
+                    depth_img,       # 前処理済み depth image
+                    pose_vec,        # 同じく前処理済み pose
+                    class_index=class_idx,
+                    layer_name=target_layer,
+                    upsample_size=(gqcnn._im_height, gqcnn._im_width)
+                )
+                # jet カラーマップ＆半透明で重ね描き
+                vis2d.imshow_gradcam(cam, cmap='jet', alpha=0.5)
             vis2d.title("Datapoint %d: Pred: %.3f Label: %.3f" %
                         (k, val_result.pred_probs[j], val_result.labels[j]),
                         fontsize=self.font_size)
             vis2d.savefig(
                 os.path.join(val_example_dir, "true_negative_%03d.png" % (i)))
 
-        # Val TP.
+        # Val FN.
         false_negative_indices = val_result.false_negative_indices
         np.random.shuffle(false_negative_indices)
         false_negative_indices = false_negative_indices[:self.num_vis]
@@ -531,15 +684,31 @@ class GQCNNAnalyzer(object):
             datapoint = dataset.datapoint(
                 k, field_names=[image_field_name, pose_field_name])
             vis2d.clf()
-            if angular_bins > 0:
-                self._plot_grasp(datapoint,
-                                 image_field_name,
-                                 pose_field_name,
-                                 gripper_mode,
-                                 angular_preds=val_predictions_raw[j])
+            if not gradcam_val_fn:
+                if angular_bins > 0:
+                    self._plot_grasp(datapoint,
+                                    image_field_name,
+                                    pose_field_name,
+                                    gripper_mode,
+                                    angular_preds=train_predictions_raw[j])
+                else:
+                    self._plot_grasp(datapoint, image_field_name, pose_field_name,
+                                    gripper_mode)
             else:
-                self._plot_grasp(datapoint, image_field_name, pose_field_name,
-                                 gripper_mode)
+                depth_img = datapoint[image_field_name]    # (H,W,1) float
+                vis2d.imshow_gradcam(depth_img.squeeze(-1), cmap=plt.cm.gray_r)
+                pose_vec  = read_pose_data(datapoint[pose_field_name],
+                                        gripper_mode)
+                # batch 次元を取らないシングルサンプル版を呼び出し
+                cam = gqcnn.gradcam(
+                    depth_img,       # 前処理済み depth image
+                    pose_vec,        # 同じく前処理済み pose
+                    class_index=class_idx,
+                    layer_name=target_layer,
+                    upsample_size=(gqcnn._im_height, gqcnn._im_width)
+                )
+                # jet カラーマップ＆半透明で重ね描き
+                vis2d.imshow_gradcam(cam, cmap='jet', alpha=0.5)
             vis2d.title("Datapoint %d: Pred: %.3f Label: %.3f" %
                         (k, val_result.pred_probs[j], val_result.labels[j]),
                         fontsize=self.font_size)

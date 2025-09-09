@@ -5,14 +5,14 @@ import copy
 from collections import defaultdict
 from sklearn.metrics import precision_score, accuracy_score, f1_score, average_precision_score
 
-#dataset_list = ["Dexnet-150", "EGAD-150", "Grasp-FractalMeshDB-006-150-v2", "Grasp-FractalMeshDB-030-150-v2", "Grasp-FractalMeshDB-070-150-v2", "Grasp-FractalMeshDB-006-030-070-150", "GFDB-006-030-070-150-full", "Primitive-150","realtrainset-6"]
-dataset_list = ["pt-Dexnet-150-ft-realtrainset6", "pt-EGAD-150-ft-realtrainset6", "pt-GFDB-006-150-ft-realtrainset6", "pt-GFDB-030-150-ft-realtrainset6", "pt-GFDB-070-150-ft-realtrainset6", "pt-GFDB-006-030-070-150-ft-realtrainset6", "pt-GFDB-006-030-070-150-full-ft-realtrainset6", "pt-Primitive-150-ft-realtrainset6", "realtrainset-6", "realtrainset-6-ep500"]
+dataset_list = ["Dexnet-150", "EGAD-150", "Grasp-FractalMeshDB-006-150-v2", "Grasp-FractalMeshDB-030-150-v2", "Grasp-FractalMeshDB-070-150-v2", "Grasp-FractalMeshDB-006-030-070-150", "Primitive-150","realtrainset-6"]
+#dataset_list = ["pt-Dexnet-150-ft-realtrainset6", "pt-EGAD-150-ft-realtrainset6", "pt-GFDB-006-150-ft-realtrainset6", "pt-GFDB-030-150-ft-realtrainset6", "pt-GFDB-070-150-ft-realtrainset6", "pt-GFDB-006-030-070-150-ft-realtrainset6", "pt-GFDB-006-030-070-150-full-ft-realtrainset6", "pt-Primitive-150-ft-realtrainset6", "realtrainset-6", "realtrainset-6-ep500"]
 #dataset_list = ["Dexnet-150", "Dexnet-EGAD-150", "Dexnet-GFDB006-150", "Dexnet-GFDB030-150", "Dexnet-GFDB070-150", "Dexnet-GFDB006030070-150", "Dexnet-GFDB006030070full-150", "Dexnet-Primitive-150"]
 #dataset_list = ["pt-Dexnet-EGAD-150-ft-realtrainset6", "pt-Dexnet-GFDB006-150-ft-realtrainset6", "pt-Dexnet-GFDB030-150-ft-realtrainset6", "pt-Dexnet-GFDB070-150-ft-realtrainset6", "pt-Dexnet-GFDB006030070-150-ft-realtrainset6", "pt-Dexnet-GFDB006030070full-150-ft-realtrainset6", "pt-Primitive-150-ft-realtrainset6", "realtrainset6"]
 #dataset_list = ["Dexnet-150", "EGAD-150", "Grasp-FractalMeshDB-006-150-v2", "Grasp-FractalMeshDB-030-150-v2", "Grasp-FractalMeshDB-070-150-v2", "Grasp-FractalMeshDB-006-030-070-150", "Primitive-150", "realtrainset"]
 #dataset_list = ["Dexnet-150"]
 #dataset_list = ["pt-Dexnet-10-ft-realtrainset6", "pt-Dexnet-50-ft-realtrainset6", "pt-Dexnet-150-ft-realtrainset6", "pt-EGAD-10-ft-realtrainset6", "pt-EGAD-50-ft-realtrainset6", "pt-EGAD-150-ft-realtrainset6", "pt-GFDB-006-10-ft-realtrainset6", "pt-GFDB-006-50-ft-realtrainset6", "pt-GFDB-006-150-ft-realtrainset6", "realtrainset-6"]
-
+#dataset_list = ["Dexnet-150-pos010", "Dexnet-150-pos020", "Dexnet-150-pos030", "Dexnet-150-pos040", "Dexnet-150-pos050", "Dexnet-150-pos060", "Dexnet-150-pos070", "Dexnet-150-pos080", "Dexnet-150-pos090"]
 
 
 for dataset in dataset_list:
@@ -24,6 +24,8 @@ for dataset in dataset_list:
     for i in range(1):
         #DATASET_NAME = f"{dataset}-{int((i+1)*10):02}"
         DATASET_NAME = f"{dataset}"
+        #DATASET_NAME = f"pt-{dataset}-ft-realtrainset6"
+        
         print(DATASET_NAME)
         try:
             train_gt = np.load(f"/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/deps/gqcnn/analysis_real_6/{DATASET_NAME}/train_result.cres/labels.npz")["arr_0"]
@@ -67,9 +69,15 @@ for dataset in dataset_list:
 
             total_counts   = defaultdict(int)
             correct_counts = defaultdict(int)
+            pred_labels_obj = defaultdict(list)
+            true_labels_obj = defaultdict(list)
 
             for t, p, y in zip(obj_labels_pred, pred_labels, true_labels):
                 total_counts[t] += 1
+                pred_labels_obj[t].append(p)
+                true_labels_obj[t].append(y)
+                print(t)
+
                 if p == y:
                     correct_counts[t] += 1
 
@@ -80,13 +88,16 @@ for dataset in dataset_list:
                 success_rate[obj_ids[t]] = correct_counts[t] / total_counts[t]
                 obj_list.append(obj_ids[t])
                 success_rate_list.append(correct_counts[t] / total_counts[t])
+                pricision_list.append(precision_score(true_labels_obj[t], pred_labels_obj[t]))
 
             #print(success_rate)
             #print(obj_list)
             print(success_rate_list)
-            #print(pricision_list)
+            print(pricision_list)
             print(f"Accuracy:{accuracy_score(true_labels, pred_labels)}")
             print(f"Precision:{precision_score(true_labels, pred_labels)}")
+            print(f"Macro-Accuracy:{sum(success_rate_list)/len(success_rate_list)}")
+            print(f"Macro-Precision:{sum(pricision_list)/len(pricision_list)}")
             print(f"F1:{f1_score(true_labels, pred_labels)}")
             print(f"AP:{average_precision_score(true_labels, pred_labels)}")
 
