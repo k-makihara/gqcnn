@@ -31,14 +31,14 @@ Vishal Satish
 
 
 class TrialConstants(object):
-    TRIAL_CPU_LOAD = 300  # Decrease to get more aggressize CPU utilization.
-    TRIAL_GPU_LOAD = 33  # Decrease to get more aggressize GPU utilization.
+    TRIAL_CPU_LOAD = 200  # Decrease to get more aggressize CPU utilization.
+    TRIAL_GPU_LOAD = 16  # Decrease to get more aggressize GPU utilization.
     # This really depends on model size (`TRIAL_GPU_LOAD` does too, but it's
     # not a hard limit per se). Ideally we would initialize models one-by-one
     # and monitor the space left, but because model initialization comes after
     # some metric calculation, we set this to be some upper bound based on the
     # largest model and do batch initalizations from there.
-    TRIAL_GPU_MEM = 2000
+    TRIAL_GPU_MEM = 1200
 
 
 class SearchConstants(object):

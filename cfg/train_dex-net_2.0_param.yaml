@@ -1,9 +1,9 @@
 # general optimization params
-train_batch_size: 64
-val_batch_size: &val_batch_size 64
+train_batch_size: 32
+val_batch_size: &val_batch_size 32
 
 # logging params
-num_epochs: [25, 50, 75]        # number of epochs to train for
+num_epochs: [100, 150, 200, 250, 500]        # number of epochs to train for
 eval_frequency: 5    # how often to get validation error (in epochs)
 save_frequency: 5    # how often to save output (in epochs)
 vis_frequency: 5  # how often to visualize filters (in epochs)
@@ -19,7 +19,7 @@ max_files_eval: 1000        # the number of validation files to use in each eval
 loss: sparse #weighted_cross_entropy l2
 optimizer: momentum #adam rmsprop
 train_l2_regularizer: 0.0005
-base_lr: [0.001, 0.01, 0.05, 0.1]
+base_lr: [0.01, 0.02, 0.05, 0.1]
 decay_step_multiplier: 0.66   # number of times to go through training datapoints before stepping down decay rate (in epochs)
 decay_rate: 0.95
 momentum_rate: 0.9
@@ -53,7 +53,7 @@ gaussian_process_scaling_factor: 4.0
 gaussian_process_sigma: 0.005
 
 # tensorboard
-tensorboard_port: 6006
+tensorboard_port: -1
 
 # debugging params
 debug: &debug 0

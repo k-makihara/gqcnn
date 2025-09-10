@@ -68,9 +68,13 @@ class GQCNNTrialWithAnalysis(ABC):
         self._process = None
 
     def _build_train_progress_dict(self):
+        # progress_dict = self._manager.dict(
+        #     training_status=GQCNNTrainingStatus.NOT_STARTED,
+        #     epoch=np.nan,
+        #     analysis=None)
         progress_dict = self._manager.dict(
             training_status=GQCNNTrainingStatus.NOT_STARTED,
-            epoch=np.nan,
+            epoch=None,
             analysis=None)
         return progress_dict
 
@@ -95,10 +99,19 @@ class GQCNNTrialWithAnalysis(ABC):
                    gpu_avail="",
                    cpu_cores_avail=[],
                    backend="tf"):
+
+        # Disable TensorBoard cleanly to avoid port conflicts/crashes
+        try:
+            if "tensorboard_port" in train_config and train_config["tensorboard_port"] is not None:
+                train_config["tensorboard_port"] = 0  # 0 = 自動割当/無効化扱い（trainer 実装に依存）
+        except Exception:
+            pass
         trial_progress_dict["status"] = TrialStatus.RUNNING
         try:
-            os.system("taskset -pc {} {}".format(
-                ",".join(str(i) for i in cpu_cores_avail), os.getpid()))
+            #os.system("taskset -pc {} {}".format(
+            #    ",".join(str(i) for i in cpu_cores_avail), os.getpid()))
+            if cpu_cores_avail:
+                os.system("taskset -pc {} {}".format(",".join(str(i) for i in cpu_cores_avail), os.getpid()))
             os.environ["CUDA_VISIBLE_DEVICES"] = gpu_avail
 
             gqcnn = get_gqcnn_model(backend,
@@ -115,12 +128,14 @@ class GQCNNTrialWithAnalysis(ABC):
                 verbose=False)
             self._run(trainer)
 
-            with open(
-                    os.path.join(output_dir, model_name,
-                                 "hyperparam_summary.json"), "wb") as fhandle:
-                json.dump(hyperparam_summary,
-                          fhandle,
-                          indent=GeneralConstants.JSON_INDENT)
+            #with open(
+            #        os.path.join(output_dir, model_name,
+            #                     "hyperparam_summary.json"), "wb") as fhandle:
+            with open(os.path.join(output_dir, model_name, "hyperparam_summary.json"), "w") as fhandle:
+                #json.dump(hyperparam_summary,
+                #          fhandle,
+                #          indent=GeneralConstants.JSON_INDENT)
+                json.dump(hyperparam_summary, fhandle, indent=2)
 
             train_progress_dict["training_status"] = "analyzing"
             analyzer = GQCNNAnalyzer(analysis_config, verbose=False)
@@ -141,9 +156,14 @@ class GQCNNTrialWithAnalysis(ABC):
             train_progress_dict["training_status"] = "finished"
             trial_progress_dict["status"] = TrialStatus.FINISHED
             sys.exit(0)
+        # except Exception as e:
+        #     trial_progress_dict["status"] = TrialStatus.EXCEPTION
+        #     trial_progress_dict["error_msg"] = str(e)
+        #     sys.exit(0)
         except Exception as e:
+            import traceback
             trial_progress_dict["status"] = TrialStatus.EXCEPTION
-            trial_progress_dict["error_msg"] = str(e)
+            trial_progress_dict["error_msg"] = f"{type(e).__name__}\n{traceback.format_exc()}"
             sys.exit(0)
 
     @property
@@ -173,13 +193,26 @@ class GQCNNTrialWithAnalysis(ABC):
         self._process.start()
 
     def __str__(self):
+        # trial_str = "Trial: {}, Training Stage: {}".format(
+        #     self._model_name, self.training_status)
+        # if self.training_status == GQCNNTrainingStatus.TRAINING and not \
+        #         np.isnan(self._train_progress_dict["epoch"]):
+        #     trial_str += ", Epoch: {}/{}".format(
+        #         self._train_progress_dict["epoch"],
+        #         self._train_cfg["num_epochs"])
         trial_str = "Trial: {}, Training Stage: {}".format(
             self._model_name, self.training_status)
-        if self.training_status == GQCNNTrainingStatus.TRAINING and not \
-                np.isnan(self._train_progress_dict["epoch"]):
-            trial_str += ", Epoch: {}/{}".format(
-                self._train_progress_dict["epoch"],
-                self._train_cfg["num_epochs"])
+        if self.training_status == GQCNNTrainingStatus.TRAINING:
+            epoch_val = self._train_progress_dict.get("epoch", None)
+            if epoch_val is not None and epoch_val != "":
+                # 数値にできれば進捗表示、できなければ文字列のまま
+                try:
+                    epoch_num = float(epoch_val)
+                    trial_str += ", Epoch: {}/{}".format(
+                        int(epoch_num), self._train_cfg["num_epochs"])
+                except (TypeError, ValueError):
+                    trial_str += ", Epoch: {}".format(epoch_val)
+
         if self.errored_out:
             trial_str += ", Error message: {}".format(self.error_msg)
         if self.training_status == "finished":

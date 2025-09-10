@@ -100,7 +100,8 @@ class ResourceManager(object):
         total_load = 0
         for core in self._cpu_cores:
             total_load += cpu_core_loads[core]
-        return total_load + CPU_LOAD_OFFSET
+        #return total_load + CPU_LOAD_OFFSET
+        return max(0.0, total_load + CPU_LOAD_OFFSET)
 
     def _get_gpu_stats(self):
         self._logger.info("Sampling gpu memory and load...")
@@ -159,10 +160,12 @@ class ResourceManager(object):
                 int((total_gpu_mem - gpu_mem) // self._trial_gpu_mem)
                 for total_gpu_mem, gpu_mem in zip(total_gpu_mems, gpu_mems)
             ]
-            max_possible_trials_gpu_per_device = map(
+            max_possible_trials_gpu_per_device = list(map(
+            #max_possible_trials_gpu_per_device = map(
                 lambda x: min(x[0], x[1]),
                 zip(max_possible_trials_gpu_load_per_device,
-                    max_possible_trials_gpu_mem_per_device))
+            #        max_possible_trials_gpu_mem_per_device))
+                    max_possible_trials_gpu_mem_per_device)))
             self._logger.info(
                 "GPU loads: {}, GPU mems: {}, Max possible trials: {}".format(
                     "% ".join([str(gpu_load) for gpu_load in gpu_loads]) + "%",
@@ -178,7 +181,11 @@ class ResourceManager(object):
                 max_possible_trials_gpu_per_device)
         else:
             # Just distribute load among gpus.
-            num_gpus = self._get_gpu_count()
+            #num_gpus = self._get_gpu_count()
+            num_gpus = len(self._gpu_devices) if len(self._gpu_devices) > 0 else 0
+            if num_gpus == 0:
+                self._logger.warning("No GPUs available.")
+                return 0, []
             trials_per_gpu = int(math.ceil(num_trials_to_schedule / num_gpus))
             gpus_avail = self._build_gpu_list([trials_per_gpu] * num_gpus)
 
