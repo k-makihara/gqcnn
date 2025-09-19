@@ -3,6 +3,7 @@ import glob
 import json
 import copy
 from collections import defaultdict
+from sklearn.metrics import precision_score, accuracy_score, f1_score, average_precision_score
 
 
 #dataset_list = ["Dexnet-150", "EGAD-150", "GFDB-006-150", "GFDB-030-150", "GFDB-070-150", "GFDB-006-030-070-150", "Primitive-150"]
@@ -10,8 +11,10 @@ from collections import defaultdict
 #dataset_list = ["Dexnet-150", "EGAD-150", "Grasp-FractalMeshDB-006-150-v2", "Grasp-FractalMeshDB-030-150-v2", "Grasp-FractalMeshDB-070-150-v2", "Grasp-FractalMeshDB-006-030-070-150", "Primitive-150", "realtrainset"]
 #dataset_list = ["pt-Dexnet-150-ft-realtrainset", "pt-EGAD-150-ft-realtrainset", "pt-GFDB-006-150-ft-realtrainset", "pt-GFDB-030-150-ft-realtrainset", "pt-GFDB-070-150-ft-realtrainset", "pt-GFDB-006-030-070-150-ft-realtrainset", "pt-Primitive-150-ft-realtrainset", "realtrainset"]
 #dataset_list = ["Dexnet-EGAD-150", "Dexnet-GFDB006-150", "Dexnet-GFDB030-150", "Dexnet-GFDB070-150", "Dexnet-GFDB006030070-150", "Dexnet-GFDB006030070full-150", "Dexnet-Primitive-150"]
-dataset_list = ["pt-Dexnet-EGAD-150-ft-realtrainset", "pt-Dexnet-GFDB006-150-ft-realtrainset", "pt-Dexnet-GFDB030-150-ft-realtrainset", "pt-Dexnet-GFDB070-150-ft-realtrainset", "pt-Dexnet-GFDB006030070-150-ft-realtrainset", "pt-Dexnet-GFDB006030070full-150-ft-realtrainset", "pt-Primitive-150-ft-realtrainset", "realtrainset"]
+#dataset_list = ["pt-Dexnet-EGAD-150-ft-realtrainset", "pt-Dexnet-GFDB006-150-ft-realtrainset", "pt-Dexnet-GFDB030-150-ft-realtrainset", "pt-Dexnet-GFDB070-150-ft-realtrainset", "pt-Dexnet-GFDB006030070-150-ft-realtrainset", "pt-Dexnet-GFDB006030070full-150-ft-realtrainset", "pt-Primitive-150-ft-realtrainset", "realtrainset"]
 #dataset_list = ["Dexnet-150"]
+#dataset_list = ["Dexnet-best","Primitive-best","EGAD-best","GFDB-006-best","GFDB-030-best","GFDB-070-best","GFDB-combined-best"]
+dataset_list = ["Dexnet-fiximage-posneg","Primitive-fiximage-posneg","EGAD-fiximage-posneg","GFDB-006-fiximage-posneg","GFDB-030-fiximage-posneg","GFDB-070-fiximage-posneg"]
 
 
 
@@ -19,6 +22,8 @@ for dataset in dataset_list:
     res = []
     obj_list = []
     success_rate_list = []
+    pricision_list = []
+    overall_success_rate_list = []
     for i in range(1):
         #DATASET_NAME = f"{dataset}-{int((i+1)*10):02}"
         DATASET_NAME = f"{dataset}"
@@ -65,9 +70,13 @@ for dataset in dataset_list:
 
             total_counts   = defaultdict(int)
             correct_counts = defaultdict(int)
+            pred_labels_obj = defaultdict(list)
+            true_labels_obj = defaultdict(list)
 
             for t, p, y in zip(obj_labels_pred, pred_labels, true_labels):
                 total_counts[t] += 1
+                pred_labels_obj[t].append(p)
+                true_labels_obj[t].append(y)
                 if p == y:
                     correct_counts[t] += 1
 
@@ -79,14 +88,23 @@ for dataset in dataset_list:
                 success_rate[obj_ids[t]] = correct_counts[t] / total_counts[t]
                 obj_list.append(obj_ids[t])
                 success_rate_list.append(correct_counts[t] / total_counts[t])
+                pricision_list.append(precision_score(true_labels_obj[t], pred_labels_obj[t]))
 
             #print(success_rate)
             #print(obj_list)
-            print(success_rate_list)
+            #print(success_rate_list)
+            #print(pricision_list)
+            print(f"Accuracy:{accuracy_score(true_labels, pred_labels)}")
+            print(f"Precision:{precision_score(true_labels, pred_labels)}")
+            print(f"Macro-Accuracy:{sum(success_rate_list)/len(success_rate_list)}")
+            print(f"Macro-Precision:{sum(pricision_list)/len(pricision_list)}")
+            print(f"F1:{f1_score(true_labels, pred_labels)}")
+            print(f"AP:{average_precision_score(true_labels, pred_labels)}")
 
             #print(f"Accuracy: {accuracy:.4f} ({correct}/{total})")
             #res.append(accuracy)
-        except:
+        except Exception as e:
+            print(e)
             continue
     #print(dataset)
     #print(res)

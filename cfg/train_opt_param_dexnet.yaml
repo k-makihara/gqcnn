@@ -3,7 +3,7 @@ train_batch_size: 32
 val_batch_size: &val_batch_size 32
 
 # logging params
-num_epochs: [100, 150, 250, 500]        # number of epochs to train for
+num_epochs: 500        # number of epochs to train for
 eval_frequency: 5    # how often to get validation error (in epochs)
 save_frequency: 5    # how often to save output (in epochs)
 vis_frequency: 5  # how often to visualize filters (in epochs)
@@ -19,7 +19,7 @@ max_files_eval: 1000        # the number of validation files to use in each eval
 loss: sparse #weighted_cross_entropy l2
 optimizer: momentum #adam rmsprop
 train_l2_regularizer: 0.0005
-base_lr: [0.01, 0.02]
+base_lr: 0.02
 decay_step_multiplier: 0.66   # number of times to go through training datapoints before stepping down decay rate (in epochs)
 decay_rate: 0.95
 momentum_rate: 0.9

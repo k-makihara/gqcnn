@@ -20,15 +20,23 @@ dataset_list = ["Dexnet-fiximage-posneg","Primitive-fiximage-posneg","EGAD-fixim
 
 
 for dataset in dataset_list:
-    res = []
-    obj_list = []
-    success_rate_list = []
-    pricision_list = []
-    overall_success_rate_list = []
-    for i in range(1):
-        #DATASET_NAME = f"{dataset}-{int((i+1)*10):02}"
-        DATASET_NAME = f"{dataset}"
-        #DATASET_NAME = f"pt-{dataset}-ft-realtrainset6"
+    
+    
+    overall_accuracy_list = []
+    overall_pricision_list = []
+    overall_macro_accuracy_list = []
+    overall_macro_pricision_list = []
+    overall_f1_list = []
+    overall_ap_list = []
+    for i in range(3):
+        res = []
+        obj_list = []
+        success_rate_list = []
+        pricision_list = []
+        if i == 0:
+            DATASET_NAME = f"{dataset}"
+        else:
+            DATASET_NAME = f"{dataset}-seed{i+1}"
         
         print(DATASET_NAME)
         try:
@@ -95,21 +103,40 @@ for dataset in dataset_list:
 
             #print(success_rate)
             #print(obj_list)
-            print(success_rate_list)
-            print(pricision_list)
-            print(f"Accuracy:{accuracy_score(true_labels, pred_labels)}")
-            print(f"Precision:{precision_score(true_labels, pred_labels)}")
-            print(f"Macro-Accuracy:{sum(success_rate_list)/len(success_rate_list)}")
-            print(f"Macro-Precision:{sum(pricision_list)/len(pricision_list)}")
-            print(f"F1:{f1_score(true_labels, pred_labels)}")
-            print(f"AP:{average_precision_score(true_labels, pred_labels)}")
+            #print(success_rate_list)
+            #print(pricision_list)
+            acc = accuracy_score(true_labels, pred_labels)
+            prec = precision_score(true_labels, pred_labels)
+            m_acc = sum(success_rate_list)/len(success_rate_list)
+            m_prec = sum(pricision_list)/len(pricision_list)
+            f1 = f1_score(true_labels, pred_labels)
+            ap = average_precision_score(true_labels, pred_labels)
+            # print(f"Accuracy:{acc}")
+            # print(f"Precision:{prec}")
+            # print(f"Macro-Accuracy:{m_acc}")
+            # print(f"Macro-Precision:{m_prec}")
+            # print(f"F1:{f1}")
+            # print(f"AP:{ap}")
+            overall_accuracy_list.append(acc)
+            overall_pricision_list.append(prec)
+            overall_macro_accuracy_list.append(m_acc)
+            overall_macro_pricision_list.append(m_prec)
+            overall_f1_list.append(f1)
+            overall_ap_list.append(ap)
 
 
             #print(f"Accuracy: {accuracy:.4f} ({correct}/{total})")
-            #res.append(accuracy)
+            res.append(accuracy_score(true_labels, pred_labels))
         except Exception as e:
             print(e)
             continue
     #print(dataset)
     #print(res)
+    print(f"Accuracy:{sum(overall_accuracy_list)/len(overall_accuracy_list)}")
+    print(f"Precision:{sum(overall_pricision_list)/len(overall_pricision_list)}")
+    print(f"Macro-Accuracy:{sum(overall_macro_accuracy_list)/len(overall_macro_accuracy_list)}")
+    print(f"Macro-Precision:{sum(overall_macro_pricision_list)/len(overall_macro_pricision_list)}")
+    print(f"F1:{sum(overall_f1_list)/len(overall_f1_list)}")
+    print(f"AP:{sum(overall_ap_list)/len(overall_ap_list)}")
+
 

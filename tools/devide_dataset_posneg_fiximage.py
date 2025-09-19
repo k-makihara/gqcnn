@@ -122,14 +122,14 @@ def stratified_subsample_indices(
     print(f"positive:{len(pos_idxs)}")
     print(f"negative:{len(neg_idxs)}")
 
-    if len(pos_idxs) >= len(neg_idxs):
-        n_sub = int(len(neg_idxs) * overall_fraction)
-    else:
-        n_sub = int(len(pos_idxs) * overall_fraction)
+    # if len(pos_idxs) >= len(neg_idxs):
+    #     n_sub = int(len(neg_idxs) * overall_fraction)
+    # else:
+    #     n_sub = int(len(pos_idxs) * overall_fraction)
     
     #n_sub = int(N * overall_fraction)
-    n_pos = int(n_sub * pos_ratio)
-    n_neg = n_sub - n_pos
+    n_pos = overall_fraction
+    n_neg = overall_fraction
 
     rng = np.random.RandomState(seed)
 
@@ -224,12 +224,12 @@ def create_splits(n_sub, train_fraction, seed, split_dir):
 
 def main(fr):
     # ─── User Configuration ───
-    #base_dirs       = ["/home/deepstation/Downloads/scale_test/dexnet_150", "/home/deepstation/Downloads/scale_test/egad_150", "/home/deepstation/Downloads/scale_test/gfdb_006_150_v2", "/home/deepstation/Downloads/scale_test/gfdb_030_150_v2", "/home/deepstation/Downloads/scale_test/gfdb_070_150_v2", "/home/deepstation/Downloads/scale_test/gfdb_006_030_070_150", "/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/primitive"]
-    base_dirs       = ["/home/deepstation/Downloads/scale_test/dexnet_150"]
+    base_dirs       = ["/home/deepstation/Downloads/scale_test/dexnet_150", "/home/deepstation/Downloads/scale_test/egad_150", "/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/gfdb_006_150_x10", "/home/deepstation/Downloads/scale_test/gfdb_030_150_v2", "/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/gfdb_070_150_x10", "/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/primitive"]
+    #base_dirs       = ["/home/deepstation/Downloads/scale_test/dexnet_150"]
     fraction       = fr      # Subsample rate
     train_fraction = 0.8      # Train split ratio
-    seeds           = [123]      # RNG seed for reproducibility
-    #seeds           = [1,2,3,4,5]      # RNG seed for reproducibility
+    #seeds           = [123]      # RNG seed for reproducibility
+    seeds           = [1,2,3]      # RNG seed for reproducibility
     bundle_size    = 1000     # Samples per NPZ bundle
     count_only = False
     label_key        = 'robust_ferrari_canny'  # NPZ内でラベルを持つprefix名
@@ -238,7 +238,7 @@ def main(fr):
 
     for base_dir in base_dirs:
         for seed in seeds:
-            out_dir        = f"{base_dir}_{int(fraction*100):03}_seed{seed}_pos{int(pos_ratio*100):03}"
+            out_dir        = f"{base_dir}_{int(fraction*2)}images_seed{seed}_pos{int(pos_ratio*100):03}"
             if not count_only:
                 if os.path.exists(out_dir):
                     raise RuntimeError(f"Output directory {out_dir} already exists!")
@@ -279,4 +279,4 @@ if __name__ == '__main__':
     # for i in range(9):
     #     fr = 0.1 * (i+1)
     #     main(fr)
-    main(1.0)
+    main(5000)

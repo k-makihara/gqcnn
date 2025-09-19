@@ -1,7 +1,7 @@
 import numpy as np
 import glob
 
-files = glob.glob("/home/deepstation/Downloads/gfdb_006_030_070_150/tensors/robust_ferrari_canny_*.npz")
+files = glob.glob("/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/gfdb_070_150_x10/tensors/robust_ferrari_canny_*.npz")
 print(len(files))
 
 thresh = 0.002
