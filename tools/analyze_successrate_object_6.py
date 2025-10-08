@@ -16,7 +16,8 @@ from sklearn.metrics import precision_score, accuracy_score, f1_score, average_p
 #dataset_list = ["Downloads_image_wise_trial_13_2025-09-10_13:47:45", "Downloads_image_wise_trial_12_2025-09-10_21:31:28"]
 #dataset_list = ["Dexnet-best","EGAD-best","GFDB-006-best","GFDB-030-best","GFDB-070-best","GFDB-combined-best"]
 #dataset_list = ["Primitive-best"]
-dataset_list = ["Dexnet-fiximage-posneg","Primitive-fiximage-posneg","EGAD-fiximage-posneg","GFDB-006-fiximage-posneg","GFDB-030-fiximage-posneg","GFDB-070-fiximage-posneg"]
+#dataset_list = ["Dexnet-fiximage-posneg","Primitive-fiximage-posneg","EGAD-fiximage-posneg","GFDB-006-fiximage-posneg","GFDB-030-fiximage-posneg","GFDB-070-fiximage-posneg"]
+dataset_list = ["realtrainset-6_opt","pt-Dexnet-best-ft-realtrainset6","pt-Primitive-best-ft-realtrainset6","pt-EGAD-best-ft-realtrainset6","pt-GFDB-006-best-ft-realtrainset6","pt-GFDB-030-best-ft-realtrainset6","pt-GFDB-070-best-ft-realtrainset6"]
 
 
 for dataset in dataset_list:

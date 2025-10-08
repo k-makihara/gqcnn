@@ -224,8 +224,8 @@ def create_splits(n_sub, train_fraction, seed, split_dir):
 
 def main(fr):
     # ─── User Configuration ───
-    base_dirs       = ["/home/deepstation/Downloads/scale_test/dexnet_150", "/home/deepstation/Downloads/scale_test/egad_150", "/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/gfdb_006_150_x10", "/home/deepstation/Downloads/scale_test/gfdb_030_150_v2", "/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/gfdb_070_150_x10", "/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/primitive"]
-    #base_dirs       = ["/home/deepstation/Downloads/scale_test/dexnet_150"]
+    #base_dirs       = ["/home/deepstation/Downloads/scale_test/dexnet_150", "/home/deepstation/Downloads/scale_test/egad_150", "/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/gfdb_006_150_x10", "/home/deepstation/Downloads/scale_test/gfdb_030_150_v2", "/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/gfdb_070_150_x10", "/home/deepstation/grasp-fractal/gqcnn-sim/3rdparty/dexnet/primitive"]
+    base_dirs       = ["/home/deepstation/Downloads/scale_test/gfdb_006_030_070_150"]
     fraction       = fr      # Subsample rate
     train_fraction = 0.8      # Train split ratio
     #seeds           = [123]      # RNG seed for reproducibility
